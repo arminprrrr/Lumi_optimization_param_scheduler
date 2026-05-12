@@ -1,5 +1,5 @@
 [project]
-name = "Lumi Optimization Param Scheduler"
+name = "Lumi_Optimization_Param_Scheduler"
 version = "0.1.0"
 description = "Lumi Plugin that schedules selected optimization parameters over training iterations."
 authors = [{name = "Armin Pouyani Rad"}]
