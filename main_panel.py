@@ -11,6 +11,7 @@ class OptimizationParamSchedulerPanel(lf.ui.Panel):
     label = "Optimization Param Scheduler"
     space = lf.ui.PanelSpace.MAIN_PANEL_TAB
     order = 230
+    update_policy = "interval"
     update_interval_ms = 250
     poll_dependencies = {lf.ui.PollDependency.SCENE, lf.ui.PollDependency.TRAINING}
 
@@ -25,9 +26,8 @@ class OptimizationParamSchedulerPanel(lf.ui.Panel):
         except Exception:
             pass
 
-    def on_update(self, *args):
-        del args
-        self._redraw()
+    def on_update(self, doc):
+        return True
 
     def _save(self, settings):
         save_persistent_settings(settings)

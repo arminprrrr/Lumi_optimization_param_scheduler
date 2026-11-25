@@ -10,35 +10,32 @@ _REGISTERED_CLASSES = []
 _SCHEDULER_INSTALLED = False
 
 
-def _is_headless_ui_error(exc: Exception) -> bool:
-    msg = str(exc).lower()
-    return (
-        "retained panel features require the retained ui manager" in msg
-        or "unavailable in this runtime" in msg
-        or "ui" in msg and "headless" in msg
-    )
-
-
-def _get_panel_classes():
+def _is_headless_runtime():
     try:
-        from .main_panel import OptimizationParamSchedulerPanel
-    except Exception as exc:
-        lf.log.warn(f"[{_PLUGIN_NAME}] Panel import failed; continuing without UI: {exc}")
-        return []
-    return [OptimizationParamSchedulerPanel]
+        from lfs_plugins.ui import RuntimeState
+    except ImportError:
+        try:
+            from lfs_plugins.ui.state import AppState as RuntimeState
+        except ImportError:
+            return False
+    try:
+        return bool(RuntimeState.is_headless.value)
+    except (AttributeError, RuntimeError):
+        return False
 
 
 def _register_optional_ui():
-    global _REGISTERED_CLASSES
-    for cls in _get_panel_classes():
-        try:
-            lf.register_class(cls)
-            _REGISTERED_CLASSES.append(cls)
-        except Exception as exc:
-            if _is_headless_ui_error(exc):
-                lf.log.info(f"[{_PLUGIN_NAME}] UI panel registration skipped in headless runtime.")
-                continue
-            raise
+    if _is_headless_runtime():
+        lf.log.info(f"[{_PLUGIN_NAME}] UI panel registration skipped in headless runtime.")
+        return
+    try:
+        from .main_panel import OptimizationParamSchedulerPanel
+        lf.register_class(OptimizationParamSchedulerPanel)
+        _REGISTERED_CLASSES.append(OptimizationParamSchedulerPanel)
+        lf.log.info(f"[{_PLUGIN_NAME}] Registered panel: {OptimizationParamSchedulerPanel.id}")
+    except Exception as exc:
+        lf.log.error(f"[{_PLUGIN_NAME}] UI panel registration failed: {exc}")
+        raise
 
 
 def on_load():
@@ -48,7 +45,19 @@ def on_load():
 
     mode = "ui" if _REGISTERED_CLASSES else "headless"
     set_runtime_mode(mode)
-    install_scheduler(settings=settings, runtime_mode=mode)
+    try:
+        install_scheduler(settings=settings, runtime_mode=mode)
+    except Exception:
+        try:
+            uninstall_scheduler()
+        finally:
+            for cls in reversed(_REGISTERED_CLASSES):
+                try:
+                    lf.unregister_class(cls)
+                except Exception as exc:
+                    lf.log.warn(f"[{_PLUGIN_NAME}] Failed to roll back panel: {exc}")
+            _REGISTERED_CLASSES.clear()
+        raise
     _SCHEDULER_INSTALLED = True
 
     lf.log.info(f"[{_PLUGIN_NAME}] Optimization parameter scheduler hooks installed")
@@ -74,7 +83,6 @@ def on_unload():
         try:
             lf.unregister_class(cls)
         except Exception as exc:
-            if not _is_headless_ui_error(exc):
-                lf.log.warn(f"{_PLUGIN_NAME}: failed to unregister {cls}: {exc}")
+            lf.log.warn(f"{_PLUGIN_NAME}: failed to unregister {cls}: {exc}")
     _REGISTERED_CLASSES = []
     lf.log.info(f"{_PLUGIN_NAME} unloaded")

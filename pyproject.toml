@@ -1,11 +1,12 @@
 [project]
 name = "Lumi_Optimization_Param_Scheduler"
-version = "0.1.0"
+version = "0.1.1"
 description = "Lumi Plugin that schedules selected optimization parameters over training iterations."
 authors = [{name = "Armin Pouyani Rad"}]
 dependencies = []
 
 [tool.lichtfeld]
+auto_start = true
 hot_reload = true
 plugin_api = ">=1,<2"
 lichtfeld_version = ">=0.4.2"

@@ -88,6 +88,20 @@ def _register_global_hooks_once():
 
 
 def _try_install_scoped_handler():
+    session_cls = getattr(lf, "ControlSession", None)
+    if session_cls is not None:
+        handler = session_cls()
+        try:
+            handler.on_training_start(_dispatch_training_start)
+            handler.on_iteration_start(_dispatch_iteration_start)
+            handler.on_pre_optimizer_step(_dispatch_pre_optimizer_step)
+            handler.on_post_step(_dispatch_post_step)
+            handler.on_training_end(_dispatch_training_end)
+        except Exception:
+            handler.clear()
+            raise
+        return handler
+
     handler_cls = getattr(lf, "ScopedHandler", None) or getattr(lf, "ControlSession", None)
     if handler_cls is None:
         return None
